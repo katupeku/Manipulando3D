@@ -1,4 +1,4 @@
-Objetivo General
+Objetivo General<br><br><br>
 
 Manipulando 3D es un proyecto electro-informático, que busca explotar y unificar dos áreas tecnológicas en pleno desarrollo en la actualidad, como lo es la electrónica y la informática.
 
@@ -9,9 +9,10 @@ La creación de computadoras, smartphones, tablets, etc. en sí y su masificaci�
 No se hubiese logrado tener el potencial con el que hoy cuentan de no ser por los avances en los componentes electrónicos y los elementos de fabricación, como resultado: la reducción y el abaratamiento del hardware.
 
 Asi como también el desarrollo de hardware se ha visto impulsado y potenciado gracias a que el software a expandido las fronteras de la imaginación y potenciado el hardware del momento.
+
 Objetivo Especifico
 
-   El objetivo específico de este proyecto es construir un guante que sense los movimientos de la mano humana como representación del avance del hardware y realizar una representación digital 3D de una mano virtual que imite los movimientos de la misma como representación del desarrollo de software y los métodos de comunicación actuales.
+El objetivo específico de este proyecto es construir un guante que sense los movimientos de la mano humana como representación del avance del hardware y realizar una representación digital 3D de una mano virtual que imite los movimientos de la misma como representación del desarrollo de software y los métodos de comunicación actuales.
 
 Limitaciones
 
