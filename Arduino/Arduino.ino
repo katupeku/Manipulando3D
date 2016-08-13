@@ -1,7 +1,10 @@
+// ================================================================
+// ===                     LIBRERIAS NECESARIAS                 ===
+// ================================================================
 #include "I2Cdev.h"
 #include "MPU6050_6Axis_MotionApps20.h"
 #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-    #include "Wire.h"
+#include "Wire.h"
 #endif
 
 // ================================================================
@@ -10,20 +13,20 @@
 MPU6050 mpu;
 
 // MPU variables control/status
-bool dmpReady = false;  // set true if DMP init was successful
+bool dmpReady = false;  // Setea en true si el DMP inicio correctamete
 uint8_t mpuIntStatus;   // holds actual interrupt status byte from MPU
 uint8_t devStatus;      // return status after each device operation (0 = success, !0 = error)
-uint16_t packetSize;    // expected DMP packet size (default is 42 bytes)
-uint16_t fifoCount;     // count of all bytes currently in FIFO
-uint8_t fifoBuffer[64]; // FIFO storage buffer
+uint16_t packetSize;    // tamaño de paquete esperado (por defecto es 42 bytes)
+uint16_t fifoCount;     // conteo de todos los bytes actual en la cola FIFO
+uint8_t fifoBuffer[64]; // buffer de almacenamiento FIFO
 
-// variables orientation/motion
-Quaternion q;           // [w, x, y, z] quaternion container
+// variables de orientacion y movimiento
+Quaternion q;
 
 String DatosMPU;
 
 // ================================================================
-// ===               VARIABLES DE LOS SENSORES                  ===
+// ===       VARIABLES DE LOS SENSORES DE FLEXIBILIDAD          ===
 // ================================================================
 const int flexpin0 = 0, flexpin1 = 1, flexpin2 = 2, flexpin3 = 3, flexpin4 = 4;
 int min0 = 10000, min1 = 10000, min2 = 10000, min3 = 10000, min4 = 10000;
@@ -40,18 +43,13 @@ void dmpDataReady() {
     mpuInterrupt = true;
 }
 
-
-
 // ================================================================
 // ===                CONFIGURACIÓN INICIAL                     ===
 // ================================================================
 void setup() {
-
-    //Serial.begin(115200);
-    Serial.begin(250000);
-    //while (!Serial); // wait for Leonardo enumeration, others continue immediately
-
-    
+//  inicializacion del puerto para la lectura de datos
+    Serial.begin(115200);
+    //Serial.begin(250000);
     
     #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
         Wire.begin();
@@ -60,40 +58,45 @@ void setup() {
         Fastwire::setup(400, true);
     #endif
 
-    // inicializo dispositivos
+//  inicializo dispositivos
     mpu.initialize();
     devStatus = mpu.dmpInitialize();
 
-    // mis offset
+//  offset de calibracion del MPU
     mpu.setXGyroOffset(-2023);
     mpu.setYGyroOffset(-30);
     mpu.setZGyroOffset(-13);
     mpu.setZAccelOffset(1470);
 
-    // make sure it worked (returns 0 if so)
+//  verifica que funcione (devuelve 0 en caso que funcione correctamente)
     if (devStatus == 0) {
-        // turn on the DMP, now that it's ready
+//      encender el DMP
         mpu.setDMPEnabled(true);
 
-        // enable Arduino interrupt detection
+//      Activar la deteccion de interrupciones de arduino
         attachInterrupt(2, dmpDataReady, RISING);
         mpuIntStatus = mpu.getIntStatus();
 
-        // set our DMP Ready flag so the main loop() function knows it's okay to use it
+//      setea la bandera para indicar que esta listo para usarse
         dmpReady = true;
 
-        // get expected DMP packet size for later comparison
+//      setear el tamaño esperado de paquete para compararlo
         packetSize = mpu.dmpGetFIFOPacketSize();
     } else {
-        // ERROR!
-        // 1 = initial memory load failed
-        // 2 = DMP configuration updates failed
-        // (if it's going to break, usually the code will be 1)
-        Serial.print(F("DMP Initialization failed (code "));
+//      EL DMP DEVOLVIO ERROR
+//      1 = fallo al cargar la memoria inicial
+//      2 = fallo en la actualizacion de configuración
+        Serial.print(F("Fallo la inicialización del DMP (codigo "));
         Serial.print(devStatus);
         Serial.println(F(")"));
     }
 
+
+////////////////////////////////////////////////////////////////////
+//              CALIBRACION DE LOS SENSORES FLEX                  //
+////////////////////////////////////////////////////////////////////
+//  Se leen 100 veces los valores de los 5 sensores estableciendo 
+//  los valores maximos y minimos obtenidos
     for(int i=0;i<100;i++){
         flexposition0 = analogRead(flexpin0);
         if (min0 > flexposition0) {
@@ -139,54 +142,65 @@ void setup() {
 }
 
 
-
-
-
 // ================================================================
 // ===             PROGRAMACIÓN PRINCIPAL EN LOOP               ===
 // ================================================================
 void loop() {
-    if (!dmpReady) return; // if programming failed, don't try to do anything
+//  si el sensor DMP no esta listo, no hace nada
+    if (!dmpReady){
+      return;
+    }
     
-    // wait for MPU interrupt or extra packet(s) available
+//  espera por una interrupcion del MPU o un paquete disponible
     while (!mpuInterrupt && fifoCount < packetSize) { 
     }
-
-    // reset interrupt flag and get INT_STATUS byte
+    
+//  resetea la badera de interrupcion y obtiene bytes de estado
     mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
 
-    // get current FIFO count
+//  obtiene la cantidad actual de FIFO
     fifoCount = mpu.getFIFOCount();
 
-    // check for overflow (this should never happen unless our code is too inefficient)
+//  checkea un desbordamiento de datos 
+//  (Esto no deberia pasar pero si el codigo es ineficiente sirve para prevenirlo)
     if ((mpuIntStatus & 0x10) || fifoCount == 1024) {
         mpu.resetFIFO();
     } else if (mpuIntStatus & 0x02) {
-        while (fifoCount < packetSize) fifoCount = mpu.getFIFOCount();
+        while (fifoCount < packetSize){
+          fifoCount = mpu.getFIFOCount();
+        }
         mpu.getFIFOBytes(fifoBuffer, packetSize);
         fifoCount -= packetSize;
 
-        // display quaternion values in easy matrix form: w,x,y,z
+//      obtiene los valores del cuaternion en forma de matriz (W,X,Y,Z)
         mpu.dmpGetQuaternion(&q, fifoBuffer);
-        
+
+//      Guardo los valores obtenidos para ser devueltos       
         DatosMPU = String(q.w)+","+String(q.x)+","+String(q.y)+","+String(q.z);
     }
 
+//  Lectura de todos los sensores de flexibildad
     flexposition0 = analogRead(flexpin0);
     flexposition1 = analogRead(flexpin1);
     flexposition2 = analogRead(flexpin2);
     flexposition3 = analogRead(flexpin3); 
     flexposition4 = analogRead(flexpin4);
-  
+
+//  se realiza un mapeo de los valores obtenidos a un porcentaje entre los 
+//  maximos y minimos establecidos en la configuracion incial
     flexposition0 = map(flexposition0,min0,max0,0,100);
     flexposition1 = map(flexposition1,min1,max1,0,100);
     flexposition2 = map(flexposition2,min2,max2,0,100);
     flexposition3 = map(flexposition3,min3,max3,0,100);
     flexposition4 = map(flexposition4,min4,max4,0,100);
 
+//  Guardo los valores obtenidos para ser devueltos
     DatosSENSORES = String(flexposition0)+","+String(flexposition1)+","+String(flexposition2)+","+String(flexposition3)+","+String(flexposition4);
 
+//  Devuelvo todos los valores obtenidos concatenados por "," (comas)
     Serial.println(DatosSENSORES+","+DatosMPU);
-    delay(20);//20
+
+//  Espera 20 milisegundos para realizar una nueva lectura
+    delay(20);
 }
