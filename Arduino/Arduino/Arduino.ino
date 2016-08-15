@@ -151,11 +151,12 @@ void loop() {
       return;
     }
     
-//  espera por una interrupcion del MPU o un paquete disponible
-    while (!mpuInterrupt && fifoCount < packetSize) { 
+//  Espera por una interrupcion o un paquete disponible
+    while (!mpuInterrupt && fifoCount < packetSize) {
+//    Es solo para manterlo en el bucle hasta que se llene el buffer
     }
     
-//  resetea la badera de interrupcion y obtiene bytes de estado
+//  Resetea la bandera de interrupcion y obtiene bytes de estado
     mpuInterrupt = false;
     mpuIntStatus = mpu.getIntStatus();
 
